@@ -2,6 +2,8 @@
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 
+
+
 #define ena 10
 #define in1 8
 #define in2 9
@@ -13,12 +15,27 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define left A3
 #define up A0
 #define down A1
-#define servo 6
 volatile bool coinflag = false;
 bool lastcoinflag = false;
 volatile unsigned long lastCoinTime = 0;  // Store last coin pulse time
 const unsigned long debounceDelay = 20;   // Debounce time in ms
 int onoff = 0;
+
+
+#include <Servo.h>
+Servo myservo;
+
+
+#define buttonpin 3
+#define servo 6
+int pos = 0;
+int neg = 0;
+int buttonpush = 0;                   // variable for reading the pushbutton status
+volatile unsigned long lastTime = 0;  // Store last coin pulse time
+unsigned long debounceDelay_2 = 200;  // Debounce time in ms
+
+
+
 
 
 
@@ -28,10 +45,44 @@ void coin() {
     lastCoinTime = currentTime;
     coinflag = !coinflag;
     onoff = 1;
+    lcd.clear();
     /*Serial.println(onoff);
     Serial.println("Coin detected!");*/
   }
 }
+
+
+int actclaw() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastTime > debounceDelay_2) {
+    lastTime = currentTime;
+    buttonpush++;
+
+
+    Serial.println("act");
+
+
+    if (buttonpush == 1) {
+      Serial.println(buttonpush);
+
+
+
+
+      return 1;
+    }
+
+
+
+
+    if (buttonpush == 2) {
+
+
+      return 2;
+    }
+  }
+}
+
+
 
 
 void setup() {
@@ -48,61 +99,32 @@ void setup() {
   pinMode(in4, OUTPUT);
 
 
+
+
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
   pinMode(coinpin, INPUT_PULLUP);
-  pinMode(servo,OUTPUT);
   Serial.begin(9600);
+  pinMode(buttonpin, INPUT_PULLUP);
+  Serial.begin(9600);
+  int buttonpush = 0;
+  myservo.attach(6);
+  myservo.write(0);
   attachInterrupt(digitalPinToInterrupt(coinpin), coin, FALLING);
+
+
+
+
+
 
   Serial.println("setup");
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
 
-
-  if (onoff == 1) {
-    switch (getpos()) {  //if onoff is on do the main loop
-      case 1:            //up
-        moveup();
-        Serial.println("up");
-        break;
-      case 2:  //down
-        movedown();
-        Serial.println("down");
-
-        break;
-
-      case 3:  //right
-        moveright();
-        Serial.println("right");
-
-        break;
-      case 4:  //left
-        Serial.println("left");
-
-        moveleft();
-        break;
-      case 5:  //center
-        Serial.println("center");
-        idle();
-        lcd.clear();
-        break;
-      default:
-        analogWrite(ena, 0);
-                analogWrite(enb, 0);
-
-                lcd.clear();
-
-        break;
-    }
-  } else {
- dialog(); }
-}
 
 
 int getpos() {
+
 
   if (digitalRead(up) == 0) {
     return 1;
@@ -117,16 +139,20 @@ int getpos() {
   }
 }
 
+
 void moveright() {
   analogWrite(ena, 255);
   digitalWrite(in1, 0);
   digitalWrite(in2, 1);
 
+
   lcd.setCursor(0, 0);
   lcd.print("right  ");
 }
 
+
 void moveleft() {
+
 
   analogWrite(ena, 255);
   digitalWrite(in1, 1);
@@ -134,6 +160,7 @@ void moveleft() {
   lcd.setCursor(0, 0);
   lcd.print("left  ");
 }
+
 
 void moveup() {
   //Serial.println("case 1");
@@ -156,11 +183,16 @@ void movedown() {
 
 
 
-void dialog(){
-  
+
+
+
+void dialog() {
+
+
   lcd.setCursor(5, 1);
   lcd.print("enter coin");
 }
+
 
 void animation_2() {
   int anidelay = 500;
@@ -190,6 +222,7 @@ void animation_2() {
   }
 }
 
+
 void idle() {
   analogWrite(ena, 0);
   analogWrite(enb, 0);
@@ -197,4 +230,96 @@ void idle() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, LOW);
+}
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+
+
+
+  if (onoff == 1) {
+    switch (getpos()) {  //if onoff is on do the main loop
+      case 1:            //up
+        moveup();
+        Serial.println("up");
+        break;
+      case 2:  //down
+        movedown();
+        Serial.println("down");
+
+
+        break;
+
+
+      case 3:  //right
+        moveright();
+        Serial.println("right");
+
+
+        break;
+      case 4:  //left
+        Serial.println("left");
+
+
+        moveleft();
+        break;
+      case 5:  //center
+        Serial.println("center");
+        idle();
+        lcd.clear();
+        break;
+      default:
+        Serial.println(0);
+        lcd.clear();
+
+
+        break;
+    }
+
+
+    if (onoff == 1 & digitalRead(buttonpin) == 0){
+      switch (actclaw()) {
+        case 1:
+          //Serial.println("dropping");
+          //Serial.println(buttonpush);
+          buttonpush = 0;
+          onoff = 1;
+          myservo.write(180);  // Move to 180 degrees
+          //Serial.println("go to 180");
+          delay(1000);
+          myservo.write(0);  // Move back to 0 degrees
+         // Serial.println("go to 0");
+          delay(1000);
+          break;
+        case 2:
+          Serial.println("dropping");
+          Serial.println(buttonpush);
+          buttonpush = 0;
+          onoff = 1;
+          myservo.write(180);  // Move to 180 degrees
+         // Serial.println("go to 180");
+          delay(1000);
+          myservo.write(0);  // Move back to 0 degrees
+         // Serial.println("go to 0");
+          delay(1000);
+          break;
+        default:
+          analogWrite(ena, 0);
+          analogWrite(enb, 0);
+          myservo.write(0);
+
+
+          lcd.clear();
+
+
+          break;
+      }
+
+
+  } else {
+    dialog();
+  }
+}
 }
